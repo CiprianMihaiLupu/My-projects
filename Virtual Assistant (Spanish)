@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Speech.Recognition;
+using System.Speech.Synthesis;
+using System.IO;
+
+namespace Viernes
+{
+    /// <summary>
+    /// Lógica de interacción para MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        SpeechRecognitionEngine Reconocedor = new SpeechRecognitionEngine();
+        SpeechSynthesizer IAViernes = new SpeechSynthesizer();
+        string Speech;
+        bool HabilitarReconocimiento = true;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            IAViernes.SpeakAsync("Viernes operativa");
+        }
+
+        private void windows_Loaded(object sender, RoutedEventArgs e)
+        {
+            CargarComandos();
+        }
+
+        void CargarComandos()
+        {
+            Reconocedor.LoadGrammarAsync(new Grammar(new GrammarBuilder(new Choices(File.ReadAllLines(@"Comandos.txt")))));
+
+            Choices Buscadores = new Choices(new string[] { "Gugel", "Yutub" });
+            GrammarBuilder Buscar = new GrammarBuilder("Busca en");
+            Buscar.Append(Buscadores);
+            Buscar.AppendDictation();
+
+            Grammar GramaticaBuscadores = new Grammar(Buscar);
+            Reconocedor.LoadGrammar(GramaticaBuscadores);
+
+            //   Reconocedor.LoadGrammarAsync(new DictationGrammar());
+            Reconocedor.RequestRecognizerUpdate();
+            Reconocedor.SpeechRecognized += Reconocedor_SpeechRecognized;
+
+            IAViernes.SpeakStarted += IAViernes_SpeakStarted;
+            IAViernes.SpeakCompleted += IAViernes_SpeakCompleted;
+
+            Reconocedor.AudioLevelUpdated += Reconocedor_AudioLevelUpdated;
+            Reconocedor.SetInputToDefaultAudioDevice();
+            Reconocedor.RecognizeAsync(RecognizeMode.Multiple);
+        }
+
+        void Reconocedor_AudioLevelUpdated(object sender, AudioLevelUpdatedEventArgs e)
+        {
+            int audiolevel = e.AudioLevel;
+            BarraVoz.Value = audiolevel;
+        }
+
+        void IAViernes_SpeakCompleted(object sender, SpeakCompletedEventArgs e)
+        {
+            HabilitarReconocimiento = true;
+        }
+
+        void IAViernes_SpeakStarted(object sender, SpeakStartedEventArgs e)
+        {
+            HabilitarReconocimiento = false;
+        }
+
+        void Reconocedor_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
+        {
+                Speech = e.Result.Text;
+         
+            if (HabilitarReconocimiento == true)
+            {
+
+            switch (Speech)
+            {
+                case "Viernes":
+                    IAViernes.SpeakAsync("¿Sí señor?" + ". . .");
+                    LblReconocimiento.Content = "";
+                    LblReconocimiento.Content = Speech;
+                    break;
+                case "Abre Gugel":
+                    IAViernes.SpeakAsync("Abriendo el buscador" + ". . .");
+                    System.Diagnostics.Process.Start("https://www.google.es/");
+                    LblReconocimiento.Content = "";
+                    LblReconocimiento.Content = Speech;
+                    break;
+                case "Abrir visor de imágenes":
+                    IAViernes.SpeakAsync("Visor listo señor" + ". . .");
+                    System.Diagnostics.Process.Start("C:\\Program Files (x86)\\FastStone MaxView\\MaxView.exe");
+                    LblReconocimiento.Content = "";
+                    LblReconocimiento.Content = Speech;
+                    break;
+                case "Apágate":
+                    IAViernes.Speak("Cerrando programa" + ". . .");
+                    App.Current.Shutdown();
+                    // Close();
+                    break;
+
+                    default:
+                    break;
+            }
+
+            }
+
+        }
+
+        private void window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            DragMove();
+        }
+    }
+}
